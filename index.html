@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outil collectif d'analyse de projet — Trajectoire bas carbone</title>
+<style>
+:root {
+  --if-blue: #0085CA;
+  --if-blue-dark: #006699;
+  --if-blue-light: #E6F3FA;
+  --if-red: #E2001A;
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --text: #1f2937;
+  --text-muted: #6b7280;
+  --text-light: #9ca3af;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --oui-bg: #16a34a;
+  --oui-bg-hover: #15803d;
+  --oui-light: #dcfce7;
+  --non-bg: #dc2626;
+  --non-bg-hover: #b91c1c;
+  --non-light: #fee2e2;
+  --grey-bg: #d1d5db;
+  --grey-text: #6b7280;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+header {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 3px solid var(--if-blue);
+}
+
+.header-meta {
+  font-size: 13px;
+  color: var(--if-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--if-blue-dark);
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+
+h2 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--if-blue-dark);
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 15px;
+  margin-bottom: 24px;
+}
+
+.progress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 32px;
+}
+
+.progress-step {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  transition: background 0.3s;
+}
+
+.progress-step.active {
+  background: var(--if-blue);
+}
+
+.screen {
+  display: none;
+}
+
+.screen.active {
+  display: block;
+}
+
+.intro {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  margin-bottom: 24px;
+}
+
+.intro p {
+  margin-bottom: 14px;
+}
+
+.intro ul {
+  margin: 12px 0 16px 20px;
+}
+
+.intro li {
+  margin-bottom: 6px;
+}
+
+.question {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin-bottom: 14px;
+}
+
+.question .label {
+  display: block;
+  font-weight: 500;
+  font-size: 17px;
+  color: var(--text);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.question .hint {
+  display: block;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 10px;
+  font-style: italic;
+}
+
+.options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.options input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.options label {
+  display: inline-block;
+  padding: 12px 28px;
+  background: var(--surface);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text);
+  transition: all 0.18s;
+  min-width: 100px;
+  text-align: center;
+}
+
+.options label:hover {
+  border-color: var(--if-blue);
+  background: var(--if-blue-light);
+}
+
+.options input[type="radio"]:focus + label {
+  outline: 3px solid var(--if-blue);
+  outline-offset: 2px;
+}
+
+/* État sélectionné OUI : vert */
+.options input[type="radio"][value="oui"]:checked + label {
+  background: var(--oui-bg);
+  border-color: var(--oui-bg);
+  color: #ffffff;
+}
+
+/* État sélectionné NON : rouge */
+.options input[type="radio"][value="non"]:checked + label {
+  background: var(--non-bg);
+  border-color: var(--non-bg);
+  color: #ffffff;
+}
+
+/* État désactivé : gris */
+.question.disabled {
+  opacity: 0.55;
+}
+
+.question.disabled .label {
+  color: var(--grey-text);
+}
+
+.question.disabled .options label {
+  background: var(--grey-bg) !important;
+  border-color: var(--grey-bg) !important;
+  color: var(--grey-text) !important;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.question.disabled .options input[type="radio"]:checked + label {
+  background: var(--grey-bg) !important;
+  border-color: var(--grey-bg) !important;
+  color: var(--grey-text) !important;
+}
+
+.nav-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+button {
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 12px 28px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.18s;
+}
+
+.btn-primary {
+  background: var(--if-blue);
+  color: #ffffff;
+  border-color: var(--if-blue);
+}
+
+.btn-primary:hover {
+  background: var(--if-blue-dark);
+  border-color: var(--if-blue-dark);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--if-blue-dark);
+  border-color: var(--border-strong);
+}
+
+.btn-secondary:hover {
+  border-color: var(--if-blue);
+  color: var(--if-blue);
+}
+
+.section-title {
+  background: var(--if-blue-light);
+  color: var(--if-blue-dark);
+  padding: 16px 22px;
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  font-weight: 600;
+  font-size: 15px;
+  border-left: 4px solid var(--if-blue);
+}
+
+.error-msg {
+  background: var(--non-light);
+  color: var(--non-bg-hover);
+  border: 1px solid var(--non-bg);
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  margin-top: 14px;
+  font-size: 14px;
+  display: none;
+}
+
+.error-msg.show {
+  display: block;
+}
+
+/* Modale popup */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.modal-backdrop.show {
+  display: flex;
+}
+
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  max-width: 640px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 32px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  border-top: 6px solid var(--if-red);
+}
+
+.modal h2 {
+  color: var(--if-red);
+  margin-bottom: 18px;
+  font-size: 22px;
+}
+
+.modal p {
+  margin-bottom: 14px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.modal .modal-section {
+  background: var(--if-blue-light);
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  margin: 16px 0;
+  font-size: 15px;
+}
+
+.modal .modal-section strong {
+  color: var(--if-blue-dark);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+/* Page de résultats */
+.result-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.result-score {
+  font-size: 72px;
+  font-weight: 700;
+  color: var(--if-blue);
+  line-height: 1;
+  margin: 16px 0;
+}
+
+.result-score.alert {
+  color: var(--non-bg);
+}
+
+.result-score.ok {
+  color: var(--oui-bg);
+}
+
+.result-label {
+  font-size: 18px;
+  color: var(--text-muted);
+}
+
+.result-message {
+  background: var(--if-blue-light);
+  border-left: 4px solid var(--if-blue);
+  padding: 18px 22px;
+  border-radius: var(--radius);
+  margin-top: 20px;
+  text-align: left;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.result-message.alert {
+  background: var(--non-light);
+  border-left-color: var(--non-bg);
+  color: var(--non-bg-hover);
+}
+
+.result-message.ok {
+  background: var(--oui-light);
+  border-left-color: var(--oui-bg);
+  color: #14532d;
+}
+
+.result-breakdown {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 26px;
+  text-align: left;
+}
+
+.result-breakdown h3 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--if-blue);
+  margin-bottom: 14px;
+}
+
+.result-breakdown .line {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+}
+
+.result-breakdown .line:last-child {
+  border-bottom: none;
+  font-weight: 600;
+  font-size: 16px;
+  padding-top: 14px;
+}
+
+footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-light);
+  text-align: center;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .app { padding: 24px 16px; }
+  h1 { font-size: 24px; }
+  h2 { font-size: 20px; }
+  .options { flex-direction: column; }
+  .options label { display: block; width: 100%; }
+  .nav-buttons { flex-direction: column-reverse; gap: 10px; }
+  .nav-buttons button { width: 100%; }
+  .intro { padding: 24px 20px; }
+  .result-score { font-size: 56px; }
+  .modal { padding: 24px 20px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+<div class="header-meta">Institut français</div>
+<h1>Outil collectif d'analyse de projet</h1>
+<p class="subtitle">Trajectoire bas carbone des projets et sous projets</p>
+</header>
+
+<div class="progress">
+<div class="progress-step active" data-step="0"></div>
+<div class="progress-step" data-step="1"></div>
+<div class="progress-step" data-step="2"></div>
+<div class="progress-step" data-step="3"></div>
+</div>
+
+<!-- ECRAN 0 : ACCUEIL -->
+<section class="screen active" data-screen="0">
+<div class="intro">
+<h2>Bienvenue</h2>
+<p>Cet outil collectif sert de guide à l'analyse des projets et sous projets, pour vérifier leur adéquation avec l'ambition de tenir une trajectoire bas carbone.</p>
+<p>Il peut être idéalement mobilisé sous la forme d'un temps délibératif avec les partenaires et parties prenantes du projet, et une fois complété, annexé le cas échéant à la fiche projet de l'Institut français.</p>
+<p>Deux dimensions sont analysées:</p>
+<ul>
+<li><strong>Confirmation du besoin</strong>, 7 questions sur la pertinence et la nécessité du projet.</li>
+<li><strong>Optimisation des impacts environnementaux</strong>, 8 questions sur l'ingénierie du projet.</li>
+</ul>
+<p>Le seuil d'alerte est fixé à 10 réponses positives sur 15. Vos réponses ne sont pas stockées, l'évaluation se fait localement dans votre navigateur.</p>
+<p class="subtitle" style="margin-top:16px;font-size:14px"><strong>Note importante.</strong> Cet outil ne permet pas d'analyser les mobilités individuelles.</p>
+<div class="nav-buttons" style="justify-content: flex-end; border-top: none; padding-top: 0;">
+<button class="btn-primary" onclick="goTo(1)">Commencer l'analyse</button>
+</div>
+</div>
+</section>
+
+<!-- ECRAN 1 : CONFIRMATION DU BESOIN -->
+<section class="screen" data-screen="1">
+<h2>1 sur 2 — Confirmation du besoin</h2>
+<p class="subtitle">La première démarche en matière de trajectoire bas carbone est d'interroger la nécessité et la pertinence du projet.</p>
+
+<div class="section-title">Le projet participe-t-il...</div>
+
+<div class="question" data-qid="q1">
+<span class="label">1. au soutien à la mise en œuvre à l'étranger des priorités culturelles de l'État (transformation numérique, professionnalisation des équipes, programmations innovantes, développement des réseaux) ?</span>
+<div class="options">
+<input type="radio" name="q1" id="q1-oui" value="oui" onchange="onAnswer()">
+<label for="q1-oui">Oui</label>
+<input type="radio" name="q1" id="q1-non" value="non" onchange="onAnswer()">
+<label for="q1-non">Non</label>
+</div>
+</div>
+
+<div class="question" data-qid="q2">
+<span class="label">2. au soutien à la diffusion de la création artistique et au développement des industries culturelles et créatives à l'international ?</span>
+<div class="options">
+<input type="radio" name="q2" id="q2-oui" value="oui" onchange="onAnswer()">
+<label for="q2-oui">Oui</label>
+<input type="radio" name="q2" id="q2-non" value="non" onchange="onAnswer()">
+<label for="q2-non">Non</label>
+</div>
+</div>
+
+<div class="question" data-qid="q3">
+<span class="label">3. au débat d'idées, à la coopération intellectuelle, à la francophonie, au renforcement des écosystèmes culturels du Sud ?</span>
+<div class="options">
+<input type="radio" name="q3" id="q3-oui" value="oui" onchange="onAnswer()">
+<label for="q3-oui">Oui</label>
+<input type="radio" name="q3" id="q3-non" value="non" onchange="onAnswer()">
+<label for="q3-non">Non</label>
+</div>
+</div>
+
+<div class="question" data-qid="q4">
+<span class="label">4. aux priorités géographiques de l'Institut français (l'Afrique, l'Europe, l'Indopacifique) ?</span>
+<div class="options">
+<input type="radio" name="q4" id="q4-oui" value="oui" onchange="onAnswer()">
+<label for="q4-oui">Oui</label>
+<input type="radio" name="q4" id="q4-non" value="non" onchange="onAnswer()">
+<label for="q4-non">Non</label>
+</div>
+</div>
+
+<div class="question" data-qid="q5">
+<span class="label">5. Ce projet répond-il à une commande politique ?</span>
+<div class="options">
+<input type="radio" name="q5" id="q5-oui" value="oui" onchange="onAnswer()">
+<label for="q5-oui">Oui</label>
+<input type="radio" name="q5" id="q5-non" value="non" onchange="onAnswer()">
+<label for="q5-non">Non</label>
+</div>
+</div>
+
+<div class="question" data-qid="q6">
+<span class="label">6. Le projet est-il cohérent avec les engagements de l'Institut français en matière de responsabilité sociétale (diversité, égalité femmes hommes, etc.) ?</span>
+<div class="options">
+<input type="radio" name="q6" id="q6-oui" value="oui" onchange="onAnswer()">
+<label for="q6-oui">Oui</label>
+<input type="radio" name="q6" id="q6-non" value="non" onchange="onAnswer()">
+<label for="q6-non">Non</label>
+</div>
+</div>
+
+<div class="question" data-qid="q7" style="border:2px solid var(--if-blue);background:var(--if-blue-light)">
+<span class="label"><strong>7. In fine, la mise en œuvre de ce projet est-elle absolument indispensable, et la possibilité d'y renoncer a-t-elle été débattue ?</strong></span>
+<div class="options">
+<input type="radio" name="q7" id="q7-oui" value="oui" onchange="onAnswer()">
+<label for="q7-oui">Oui</label>
+<input type="radio" name="q7" id="q7-non" value="non" onchange="onIndispensableNon()">
+<label for="q7-non">Non</label>
+</div>
+<p class="hint">Question pivot. Une réponse négative arrête l'analyse.</p>
+</div>
+
+<div class="error-msg" id="err1">Merci de répondre à toutes les questions avant de continuer.</div>
+
+<div class="nav-buttons">
+<button class="btn-secondary" onclick="goTo(0)">Retour</button>
+<button class="btn-primary" onclick="validerEcran1()">Suivant</button>
+</div>
+</section>
+
+<!-- ECRAN 2 : OPTIMISATION DES IMPACTS -->
+<section class="screen" data-screen="2">
+<h2>2 sur 2 — Optimisation des impacts environnementaux</h2>
+<p class="subtitle">Un projet pertinent peut toujours être amélioré au regard des enjeux de soutenabilité en interrogeant son ingénierie, en lien avec l'ensemble des partenaires associés. Il est possible d'en optimiser les impacts en veillant néanmoins à ne pas abîmer les objectifs du projet et à tenir compte des contextes, des enjeux de diversité et de la mise en place de démarches équitables notamment envers les publics éloignés et les scènes invisibilisées.</p>
+
+<div class="question" data-qid="q8">
+<span class="label">8. Avez-vous envisagé la possibilité de changer le lieu ou la date de ce projet pour optimiser ses impacts environnementaux (meilleure accessibilité des sites, mutualisation avec d'autres événements, d'autres partenaires) ?</span>
+<div class="options">
+<input type="radio" name="q8" id="q8-oui" value="oui" onchange="onAnswer()">
+<label for="q8-oui">Oui</label>
+<input type="radio" name="q8" id="q8-non" value="non" onchange="onAnswer()">
+<label for="q8-non">Non</label>
+</div>
+</div>
+
+<div class="question" data-qid="q9">
+<span class="label">9. Tous les déplacements prévus dans ce projet sont-ils nécessaires ? Ont-ils été remplacés par du distanciel quand cela était possible et souhaitable ?</span>
+<div class="options">
+<input type="radio" name="q9" id="q9-oui" value="oui" onchange="onAnswer()">
+<label for="q9-oui">Oui</label>
+<input type="radio" name="q9" id="q9-non" value="non" onchange="onAnswer()">
+<label for="q9-non">Non</label>
+</div>
+</div>
+
+<div class="question" data-qid="q10">
+<span class="label">10. Des options de report modal (train, bateau, bus) réalistes existent-elles et ont-elles été mobilisées à la hauteur des possibles ?</span>
+<div class="options">
+<input type="radio" name="q10" id="q10-oui" value="oui" onchange="onAnswer()">
+<label for="q10-oui">Oui</label>
+<input type="radio" name="q10" id="q10-non" value="non" onchange="onAnswer()">
+<label for="q10-non">Non</label>
+</div>
+</div>
+
+<div class="question" data-qid="q11">
+<span class="label">11. Avez-vous prolongé au mieux les durées de séjour des personnes en mobilité (programme élargi, partenariats nouveaux, mises en réseau, etc.) ?</span>
+<div class="options">
+<input type="radio" name="q11" id="q11-oui" value="oui" onchange="onAnswer()">
+<label for="q11-oui">Oui</label>
+<input type="radio" name="q11" id="q11-non" value="non" onchange="onAnswer()">
+<label for="q11-non">Non</label>
+</div>
+</div>
+
+<div class="question" data-qid="q12">
+<span class="label">12. Les partenaires locaux se sont-ils organisés pour baisser l'impact carbone de l'événement sur l'ensemble des activités à leur charge (catering végétarien, co voyages, sobriété énergétique, mutualisations, etc.) ?</span>
+<div class="options">
+<input type="radio" name="q12" id="q12-oui" value="oui" onchange="onAnswer()">
+<label for="q12-oui">Oui</label>
+<input type="radio" name="q12" id="q12-non" value="non" onchange="onAnswer()">
+<label for="q12-non">Non</label>
+</div>
+</div>
+
+<div class="question" data-qid="q13">
+<span class="label">13. Des temps d'échange sur l'amélioration de la soutenabilité environnementale de l'événement ou du projet sont-ils prévus avec les différents partenaires ?</span>
+<div class="options">
+<input type="radio" name="q13" id="q13-oui" value="oui" onchange="onAnswer()">
+<label for="q13-oui">Oui</label>
+<input type="radio" name="q13" id="q13-non" value="non" onchange="onAnswer()">
+<label for="q13-non">Non</label>
+</div>
+</div>
+
+<div class="question" data-qid="q14">
+<span class="label">14. La participation locale à l'événement (fréquentation locale, implication des prestataires locaux, etc.) a-t-elle été renforcée au mieux ?</span>
+<div class="options">
+<input type="radio" name="q14" id="q14-oui" value="oui" onchange="onAnswer()">
+<label for="q14-oui">Oui</label>
+<input type="radio" name="q14" id="q14-non" value="non" onchange="onAnswer()">
+<label for="q14-non">Non</label>
+</div>
+</div>
+
+<div class="question" data-qid="q15">
+<span class="label">15. La communication interne et externe autour des bonnes pratiques éco responsables mises en place lors du projet est-elle suffisante ?</span>
+<div class="options">
+<input type="radio" name="q15" id="q15-oui" value="oui" onchange="onAnswer()">
+<label for="q15-oui">Oui</label>
+<input type="radio" name="q15" id="q15-non" value="non" onchange="onAnswer()">
+<label for="q15-non">Non</label>
+</div>
+</div>
+
+<div class="error-msg" id="err2">Merci de répondre à toutes les questions avant de continuer.</div>
+
+<div class="nav-buttons">
+<button class="btn-secondary" onclick="goTo(1)">Retour</button>
+<button class="btn-primary" onclick="validerEcran2()">Voir le résultat</button>
+</div>
+</section>
+
+<!-- ECRAN 3 : RESULTAT -->
+<section class="screen" data-screen="3">
+<h2>Résultat de l'analyse</h2>
+<p class="subtitle">La note obtenue vient valider l'optimisation du projet du point de vue de son ingénierie et de ses impacts.</p>
+
+<div class="result-card">
+<div class="result-label">Score total</div>
+<div id="scoreAffichage" class="result-score">0</div>
+<div class="result-label">sur 15 réponses positives</div>
+<div id="messageResultat" class="result-message"></div>
+</div>
+
+<div class="result-breakdown">
+<h3>Détail par section</h3>
+<div class="line"><span>Confirmation du besoin</span><span id="detailBesoin">0 sur 7</span></div>
+<div class="line"><span>Optimisation des impacts</span><span id="detailOptim">0 sur 8</span></div>
+<div class="line"><span>Total</span><span id="detailTotal">0 sur 15</span></div>
+</div>
+
+<div class="nav-buttons">
+<button class="btn-secondary" onclick="recommencer()">Recommencer une analyse</button>
+<button class="btn-primary" onclick="window.print()">Imprimer le résultat</button>
+</div>
+</section>
+
+<!-- MODALE POPUP -->
+<div class="modal-backdrop" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+<div class="modal">
+<h2 id="modalTitle">Analyse interrompue</h2>
+<p>Vous avez indiqué que la mise en œuvre du projet n'est pas absolument indispensable. L'analyse ne peut donc pas se poursuivre dans cet outil.</p>
+
+<div class="modal-section">
+<strong>Rappel sur la finalité de l'outil</strong>
+Cet outil collectif sert de guide à l'analyse des projets et sous projets, pour vérifier leur adéquation avec l'ambition de tenir une trajectoire bas carbone. Il peut être idéalement mobilisé sous la forme d'un temps délibératif avec les partenaires et parties prenantes du projet ou du sous projet, et une fois complété, annexé le cas échéant à la fiche projet de l'Institut français. Il ne permet pas d'analyser les mobilités individuelles. La note obtenue vient valider l'optimisation du projet du point de vue de son ingénierie et de ses impacts.
+</div>
+
+<p>La première démarche en matière de trajectoire bas carbone consiste précisément à interroger la nécessité et la pertinence du projet. Une réponse négative à cette question pivot suggère de rouvrir la délibération collective avant d'envisager une optimisation des impacts.</p>
+
+<div class="modal-actions">
+<button class="btn-secondary" onclick="fermerModale()">Revenir aux questions</button>
+<button class="btn-primary" onclick="recommencer()">Recommencer</button>
+</div>
+</div>
+</div>
+
+<footer>
+Outil collectif d'analyse de projet pour la trajectoire bas carbone — Institut français.<br>
+Évaluation effectuée localement, aucune donnée transmise.
+</footer>
+
+</div>
+
+<script>
+(function(){
+
+// LISTE DES IDENTIFIANTS DE QUESTION
+var QUESTIONS_BESOIN = ['q1','q2','q3','q4','q5','q6','q7'];
+var QUESTIONS_OPTIM = ['q8','q9','q10','q11','q12','q13','q14','q15'];
+var TOUTES_QUESTIONS = QUESTIONS_BESOIN.concat(QUESTIONS_OPTIM);
+
+// NAVIGATION ENTRE ECRANS
+window.goTo = function(n){
+  var sections = document.querySelectorAll('.screen');
+  sections.forEach(function(s){ s.classList.remove('active'); });
+  var cible = document.querySelector('.screen[data-screen="'+n+'"]');
+  if(cible){ cible.classList.add('active'); }
+
+  var steps = document.querySelectorAll('.progress-step');
+  steps.forEach(function(s, i){
+    if(i <= n){ s.classList.add('active'); } else { s.classList.remove('active'); }
+  });
+
+  window.scrollTo(0, 0);
+};
+
+// LECTURE D'UNE REPONSE RADIO
+function getRadio(name){
+  var el = document.querySelector('input[name="'+name+'"]:checked');
+  return el ? el.value : '';
+}
+
+// VERROUILLAGE / DEVERROUILLAGE DES QUESTIONS
+function verrouillerToutes(saufQ7){
+  TOUTES_QUESTIONS.forEach(function(qid){
+    if(qid === 'q7') return;
+    var bloc = document.querySelector('.question[data-qid="'+qid+'"]');
+    if(bloc){ bloc.classList.add('disabled'); }
+    document.querySelectorAll('input[name="'+qid+'"]').forEach(function(inp){
+      inp.disabled = true;
+    });
+  });
+}
+
+function deverrouillerToutes(){
+  TOUTES_QUESTIONS.forEach(function(qid){
+    var bloc = document.querySelector('.question[data-qid="'+qid+'"]');
+    if(bloc){ bloc.classList.remove('disabled'); }
+    document.querySelectorAll('input[name="'+qid+'"]').forEach(function(inp){
+      inp.disabled = false;
+    });
+  });
+}
+
+// COMPORTEMENT SPECIAL : REPONSE NON A LA QUESTION 7
+window.onIndispensableNon = function(){
+  verrouillerToutes();
+  ouvrirModale();
+};
+
+// COMPORTEMENT GENERIQUE A CHAQUE REPONSE
+window.onAnswer = function(){
+  var rep7 = getRadio('q7');
+  if(rep7 !== 'non'){
+    deverrouillerToutes();
+  }
+};
+
+// OUVRIR ET FERMER LA MODALE
+function ouvrirModale(){
+  document.getElementById('modal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+window.fermerModale = function(){
+  document.getElementById('modal').classList.remove('show');
+  document.body.style.overflow = '';
+  var q7non = document.getElementById('q7-non');
+  if(q7non){ q7non.checked = false; }
+  deverrouillerToutes();
+};
+
+// FERMETURE DE LA MODALE AVEC LA TOUCHE ECHAP
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && document.getElementById('modal').classList.contains('show')){
+    fermerModale();
+  }
+});
+
+// VALIDATION ECRAN 1 : TOUTES LES QUESTIONS DOIVENT ETRE REMPLIES
+window.validerEcran1 = function(){
+  var err = document.getElementById('err1');
+  err.classList.remove('show');
+
+  if(getRadio('q7') === 'non'){
+    ouvrirModale();
+    return;
+  }
+
+  for(var i=0; i<QUESTIONS_BESOIN.length; i++){
+    if(!getRadio(QUESTIONS_BESOIN[i])){
+      err.classList.add('show');
+      err.scrollIntoView({behavior:'smooth', block:'center'});
+      return;
+    }
+  }
+  goTo(2);
+};
+
+// VALIDATION ECRAN 2
+window.validerEcran2 = function(){
+  var err = document.getElementById('err2');
+  err.classList.remove('show');
+
+  for(var i=0; i<QUESTIONS_OPTIM.length; i++){
+    if(!getRadio(QUESTIONS_OPTIM[i])){
+      err.classList.add('show');
+      err.scrollIntoView({behavior:'smooth', block:'center'});
+      return;
+    }
+  }
+  calculerResultat();
+};
+
+// CALCUL DU SCORE FINAL ET AFFICHAGE
+function calculerResultat(){
+  var scoreBesoin = 0;
+  QUESTIONS_BESOIN.forEach(function(qid){
+    if(getRadio(qid) === 'oui'){ scoreBesoin++; }
+  });
+
+  var scoreOptim = 0;
+  QUESTIONS_OPTIM.forEach(function(qid){
+    if(getRadio(qid) === 'oui'){ scoreOptim++; }
+  });
+
+  var total = scoreBesoin + scoreOptim;
+
+  document.getElementById('scoreAffichage').textContent = total;
+  document.getElementById('detailBesoin').textContent = scoreBesoin + ' sur 7';
+  document.getElementById('detailOptim').textContent = scoreOptim + ' sur 8';
+  document.getElementById('detailTotal').textContent = total + ' sur 15';
+
+  var scoreEl = document.getElementById('scoreAffichage');
+  var msgEl = document.getElementById('messageResultat');
+  scoreEl.classList.remove('alert', 'ok');
+  msgEl.classList.remove('alert', 'ok');
+
+  if(total < 10){
+    scoreEl.classList.add('alert');
+    msgEl.classList.add('alert');
+    msgEl.innerHTML = '<strong>Seuil d\'alerte atteint.</strong> Le score est inférieur à 10 sur 15. Une délibération collective complémentaire est recommandée pour identifier les leviers d\'optimisation prioritaires, en veillant à ne pas abîmer les objectifs initiaux du projet et à tenir compte des enjeux de diversité et d\'équité.';
+  } else if(total >= 13){
+    scoreEl.classList.add('ok');
+    msgEl.classList.add('ok');
+    msgEl.innerHTML = '<strong>Projet solidement aligné.</strong> Le projet présente un bon niveau d\'optimisation. Le suivi des engagements en cours de mise en œuvre et la communication des bonnes pratiques restent des leviers utiles.';
+  } else {
+    scoreEl.classList.add('ok');
+    msgEl.innerHTML = '<strong>Projet sur de bonnes bases.</strong> Le score dépasse le seuil d\'alerte. Des marges de progrès demeurent identifiables, notamment sur les questions ayant reçu une réponse négative.';
+  }
+
+  goTo(3);
+}
+
+// RECOMMENCER UNE ANALYSE
+window.recommencer = function(){
+  document.querySelectorAll('input[type="radio"]').forEach(function(r){ r.checked = false; });
+  deverrouillerToutes();
+  document.getElementById('modal').classList.remove('show');
+  document.body.style.overflow = '';
+  document.getElementById('err1').classList.remove('show');
+  document.getElementById('err2').classList.remove('show');
+  goTo(0);
+};
+
+})();
+</script>
+</body>
+</html>
